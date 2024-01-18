@@ -1,7 +1,6 @@
 import { Tensor } from "onnxruntime-web";
 import { detectFace } from "./detect_face";
 import { calculateDistance } from "./calculate_distance";
-import * as faceapi from "face-api.js";
 
 /**
  * Output embedding vector for single face
@@ -51,7 +50,7 @@ export const embed = async (image, session, inputShape) => {
 
 
 /**
- * face recognition (facenet) (face detection using face-api.js)
+ * face recognition (facenet) (face detection using face-api)
  * @param {HTMLImageElement} image1    
  * @param {HTMLImageElement} image2    
  * @param {HTMLCanvasElement} canvas1  
@@ -62,6 +61,7 @@ export const embed = async (image, session, inputShape) => {
  * @param {Boolean} useTinyLandmark    Whether to use tiny landmark detector
  */
 export const recognize = async (image1, image2, canvas1, canvas2, session, inputShape, useSsdDetector, useTinyLandmark) => {
+    const start = performance.now();
     if (image1 && image2) {
         // Set canvas width and height
         canvas1.width = image1.width;
@@ -94,4 +94,5 @@ export const recognize = async (image1, image2, canvas1, canvas2, session, input
     } else {
         console.log("At least 2 images");
     };
+    console.log("consume==> ", performance.now() - start);
 }

@@ -1,5 +1,5 @@
 // import * as tf from '@tensorflow/tfjs-core'
-// import * as faceapi from "face-api.js"
+// import * as faceapi from "@vladmandic/face-api"
 
 /**
  * calculate distance between embeddings

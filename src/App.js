@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Tensor, InferenceSession } from "onnxruntime-web";
-import * as faceapi from 'face-api.js'
+import * as faceapi from "@vladmandic/face-api"   // use @vladmandic/face-api instead of face-api.js
 import Loader from "./components/loader";
 import { recognize } from "./utils/recognize";
 import "./style/App.css";
@@ -23,6 +23,17 @@ const App = () => {
     const canvasRef1 = useRef(null);
     const canvasRef2 = useRef(null);
 
+    // // check out webgl
+    // function isWebGLAvailable() {
+    //     try {
+    //       var canvas = document.createElement('canvas');
+    //       return !! (window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
+    //     } catch(e) {
+    //       return false;
+    //     }
+    // }
+    // console.log("WebGL available => ", isWebGLAvailable())
+
     // model info of facenet -> face recognition
     const modelInfo = {
         name: "facenet.onnx",
@@ -41,13 +52,15 @@ const App = () => {
         setWasmPaths(`${process.env.PUBLIC_URL}/static/js/`);   
         await tf.setBackend('wasm');
         await tf.ready();
-        console.log(tf.getBackend())  // webgl
+        console.log(tf.getBackend())  // wasm
     }
+    // if (not isWebGLAvailable())
     init();
     
     cv["onRuntimeInitialized"] = async () => {
         setLoading("Loading FaceNet model...");
         const facenet = await InferenceSession.create(`${process.env.PUBLIC_URL}/model/${modelInfo.name}`);
+        // const facenet = await InferenceSession.create(`/model/${modelInfo.name}`);
         setSession(facenet);
 
         if (useSsdDetector) {
@@ -62,7 +75,7 @@ const App = () => {
             await faceapi.nets.faceLandmark68Net.loadFromUri("/model");
         };
 
-        console.log("backend==> ", tf.getBackend())  // webgl
+        console.log("backend==> ", tf.getBackend())  // wasm
         setLoading(false);
     }
 
