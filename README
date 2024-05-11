@@ -1,2 +1,6 @@
-仿照yolov7-onnxruntime-web做一下基于facenet的人脸识别
-之前尝试使用ssdmobilev1+人脸对齐，推理时间过长，因此考虑尝试mtcnn试试。
+face detection and recognition:
+    face-api / mediapipe + facenet
+
+steps:
+    1.yarn install
+    2.yarn start

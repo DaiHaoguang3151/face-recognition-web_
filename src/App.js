@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Tensor, InferenceSession } from "onnxruntime-web";
+// import * as ort from 'onnxruntime-web';
 import * as faceapi from "@vladmandic/face-api"   // use @vladmandic/face-api instead of face-api.js
 import Loader from "./components/loader";
 import { recognize } from "./utils/recognize";
 import "./style/App.css";
 import * as tf from '@tensorflow/tfjs';
 import { setWasmPaths } from "@tensorflow/tfjs-backend-wasm";
+import { FaceDetection } from "@mediapipe/face_detection";
 
 
 const App = () => {
@@ -23,16 +25,16 @@ const App = () => {
     const canvasRef1 = useRef(null);
     const canvasRef2 = useRef(null);
 
-    // // check out webgl
-    // function isWebGLAvailable() {
-    //     try {
-    //       var canvas = document.createElement('canvas');
-    //       return !! (window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
-    //     } catch(e) {
-    //       return false;
-    //     }
-    // }
-    // console.log("WebGL available => ", isWebGLAvailable())
+    // check out webgl，（此处判断不准）
+    function isWebGLAvailable() {
+        try {
+          var canvas = document.createElement('canvas');
+          return !! (window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
+        } catch(e) {
+          return false;
+        }
+    }
+    console.log("WebGL available => ", isWebGLAvailable())
 
     // model info of facenet -> face recognition
     const modelInfo = {
@@ -41,8 +43,10 @@ const App = () => {
     }
 
     // model selection -> face detection
-    let useSsdDetector = true;
+    let useMediapipe = true;       // use @mediapipe/face_detection if true else @vladmandic/face-api
+    let useSsdDetector = true;     // params for face-api
     let useTinyLandmark = false;
+    let faceDetection = null       // faceDetection of @mediapipe/face_detection
 
     // set backend wasm
     async function init() {
@@ -54,25 +58,53 @@ const App = () => {
         await tf.ready();
         console.log(tf.getBackend())  // wasm
     }
+
+    // isWebGLAvailable()
     // if (not isWebGLAvailable())
     init();
+
+    // init faceDetection
+    function initFaceDetection() {
+        const faceDetection = new FaceDetection({
+            locateFile: (file) => {
+                return `${process.env.PUBLIC_URL}/static/js/${file}`;   // load target files
+            }
+        });
+        faceDetection.setOptions({
+            model: 'short',                 // short range detection
+            minDetectionConfidence: 0.5
+        });
+        return faceDetection;
+    };
+
+    if (useMediapipe) {
+        faceDetection = initFaceDetection()
+    };
     
     cv["onRuntimeInitialized"] = async () => {
         setLoading("Loading FaceNet model...");
-        const facenet = await InferenceSession.create(`${process.env.PUBLIC_URL}/model/${modelInfo.name}`);
+        // ort.env.wasm.wasmPaths = `${process.env.PUBLIC_URL}/static/js/`    // set wasm paths of ort
+        const facenet = await InferenceSession.create(
+            `${process.env.PUBLIC_URL}/model/${modelInfo.name}`, 
+            // { executionProviders: ["webgl"] }   // 这边用webgl会报错！
+            );
         // const facenet = await InferenceSession.create(`/model/${modelInfo.name}`);
         setSession(facenet);
 
-        if (useSsdDetector) {
-            await faceapi.nets.ssdMobilenetv1.loadFromUri("/model");
+        if (!useMediapipe){
+            if (useSsdDetector) {
+                await faceapi.nets.ssdMobilenetv1.loadFromUri("/model");
+            } else {
+                await faceapi.nets.tinyFaceDetector.loadFromUri("/model");
+            };
+            
+            if (useTinyLandmark) {
+                await faceapi.nets.faceLandmark68TinyNet.loadFromUri("/model");
+            } else {
+                await faceapi.nets.faceLandmark68Net.loadFromUri("/model");
+            };
         } else {
-            await faceapi.nets.tinyFaceDetector.loadFromUri("/model");
-        };
-        
-        if (useTinyLandmark) {
-            await faceapi.nets.faceLandmark68TinyNet.loadFromUri("/model");
-        } else {
-            await faceapi.nets.faceLandmark68Net.loadFromUri("/model");
+            console.log("use @mediapipe/face_detection instead...");
         };
 
         console.log("backend==> ", tf.getBackend())  // wasm
@@ -191,8 +223,10 @@ const App = () => {
                         canvasRef2.current,
                         session,
                         modelInfo.inputShape,
+                        useMediapipe,
                         useSsdDetector,
-                        useTinyLandmark
+                        useTinyLandmark,
+                        faceDetection
                         )
                 }}>
                 Calculate Distance

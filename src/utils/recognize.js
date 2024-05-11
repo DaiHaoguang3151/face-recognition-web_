@@ -1,6 +1,8 @@
 import { Tensor } from "onnxruntime-web";
 import { detectFace } from "./detect_face";
+import { detectFaceMediapipe } from "./detect_face_mediapipe";
 import { calculateDistance } from "./calculate_distance";
+import { FaceDetection } from "@mediapipe/face_detection";
 
 /**
  * Output embedding vector for single face
@@ -50,17 +52,20 @@ export const embed = async (image, session, inputShape) => {
 
 
 /**
- * face recognition (facenet) (face detection using face-api)
+ * Face recognition (facenet) (face detection using face-api or mediapipe)
  * @param {HTMLImageElement} image1    
  * @param {HTMLImageElement} image2    
  * @param {HTMLCanvasElement} canvas1  
  * @param {HTMLCanvasElement} canvas2  
  * @param {ort.InferenceSession} session   facenet session
  * @param {Number[]} inputShape        model input shape
+ * @param {Boolean} useMediapipe       Whether to use mediapipe/face_detection
  * @param {Boolean} useSsdDetector     Whether to use SSD detector
  * @param {Boolean} useTinyLandmark    Whether to use tiny landmark detector
+ * @param {FaceDetection} faceDetection    Instance of FaceDetection
  */
-export const recognize = async (image1, image2, canvas1, canvas2, session, inputShape, useSsdDetector, useTinyLandmark) => {
+export const recognize = async (image1, image2, canvas1, canvas2, session, inputShape, 
+    useMediapipe, useSsdDetector, useTinyLandmark, faceDetection) => {
     const start = performance.now();
     if (image1 && image2) {
         // Set canvas width and height
@@ -70,8 +75,14 @@ export const recognize = async (image1, image2, canvas1, canvas2, session, input
         canvas2.height = image2.height;
 
         // Face detection
-        const det1 = await detectFace(image1, canvas1, useSsdDetector, useTinyLandmark);
-        const det2 = await detectFace(image2, canvas2, useSsdDetector, useTinyLandmark);
+        let det1, det2;
+        if (!useMediapipe) {
+            det1 = await detectFace(image1, canvas1, useSsdDetector, useTinyLandmark);
+            det2 = await detectFace(image2, canvas2, useSsdDetector, useTinyLandmark);
+        } else {
+            det1 = await detectFaceMediapipe(image1, canvas1, faceDetection);
+            det2 = await detectFaceMediapipe(image2, canvas2, faceDetection);
+        };
 
         if (!(det1 && det2)) {
             return;
